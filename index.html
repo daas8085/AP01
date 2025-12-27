@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>INDOSPIRIT BEVERAGES - Analytics Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        body { background-color: #f5f7fa; color: #333; padding: 20px; }
+        .container { max-width: 1800px; margin: 0 auto; }
+        .header { text-align: center; margin-bottom: 30px; padding: 25px; background: linear-gradient(135deg, #1a237e 0%, #283593 100%); border-radius: 12px; color: white; box-shadow: 0 6px 15px rgba(0, 0, 0, 0.1); }
+        .header h1 { font-size: 2.8rem; margin-bottom: 8px; letter-spacing: 1px; }
+        .header p { font-size: 1.1rem; opacity: 0.9; }
+
+        .financial-overview { display: grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap: 25px; margin-bottom: 30px; }
+        .financial-card { background: white; border-radius: 12px; padding: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); display: flex; align-items: center; gap: 20px; }
+        .financial-icon { width: 60px; height: 60px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.8rem; }
+        .invoice-icon { background: #e8eaf6; color: #1a237e; }
+        .outstanding-icon { background: #ffebee; color: #f44336; }
+        .pending-icon { background: #fff3e0; color: #ff9800; }
+        .financial-info h3 { font-size: 1rem; color: #666; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 1px; }
+        .financial-value { font-size: 1.8rem; font-weight: 700; color: #1a237e; }
+        .outstanding-value { color: #f44336; }
+        .pending-value { color: #ff9800; }
+        .financial-subtext { font-size: 0.9rem; color: #777; }
+
+        .kpi-container { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 25px; margin-bottom: 40px; }
+        .kpi-card { background: white; border-radius: 12px; padding: 25px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08); transition: transform 0.3s ease, box-shadow 0.3s ease; border-top: 5px solid #1a237e; position: relative; }
+        .kpi-card.warning { border-top-color: #ff9800; }
+        .kpi-card.alert { border-top-color: #f44336; }
+        .kpi-card.success { border-top-color: #4caf50; }
+        .kpi-card:hover { transform: translateY(-5px); box-shadow: 0 8px 20px rgba(0,0,0,0.12); }
+        .kpi-card h3 { font-size: 1rem; color: #666; margin-bottom: 15px; text-transform: uppercase; letter-spacing: 1px; }
+        .kpi-value { font-size: 2.5rem; font-weight: 700; color: #1a237e; margin-bottom: 5px; }
+        .kpi-card.warning .kpi-value { color: #ff9800; }
+        .kpi-card.alert .kpi-value { color: #f44336; }
+        .kpi-card.success .kpi-value { color: #4caf50; }
+        .kpi-subtext { font-size: 0.95rem; color: #777; }
+        .kpi-trend { position: absolute; top: 20px; right: 20px; font-size: 0.9rem; padding: 4px 10px; border-radius: 20px; font-weight: 600; }
+        .trend-up { background-color: #e8f5e9; color: #2e7d32; }
+        .trend-down { background-color: #ffebee; color: #c62828; }
+        .trend-neutral { background-color: #f5f5f5; color: #666; }
+
+        .combined-chart-container { display: grid; grid-template-columns: repeat(auto-fit, minmax(600px, 1fr)); gap: 30px; margin-bottom: 40px; }
+        .charts-container { display: grid; grid-template-columns: repeat(auto-fit, minmax(500px, 1fr)); gap: 30px; margin-bottom: 40px; }
+        .chart-card { background: white; border-radius: 12px; padding: 25px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08); margin-bottom: 30px; }
+        .chart-card h2 { font-size: 1.3rem; color: #1a237e; margin-bottom: 20px; padding-bottom: 12px; border-bottom: 2px solid #f0f2f5; }
+        .chart-container { position: relative; height: 300px; width: 100%; }
+
+        .chart-legend { display: flex; justify-content: center; gap: 20px; margin-top: 15px; flex-wrap: wrap; }
+        .legend-item { display: flex; align-items: center; gap: 8px; }
+        .legend-color { width: 12px; height: 12px; border-radius: 2px; }
+
+        .summary-section { background: white; border-radius: 12px; padding: 25px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); margin-bottom: 30px; }
+        .summary-section h2 { font-size: 1.3rem; color: #1a237e; margin-bottom: 20px; padding-bottom: 12px; border-bottom: 2px solid #f0f2f5; }
+        .summary-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; }
+        .summary-item { padding: 15px; background: #f8f9fa; border-radius: 8px; border-left: 4px solid #1a237e; }
+        .summary-item.warning { border-left-color: #ff9800; }
+        .summary-item.alert { border-left-color: #f44336; }
+        .summary-item.success { border-left-color: #4caf50; }
+        .summary-item h4 { font-size: 1rem; color: #555; margin-bottom: 8px; }
+        .summary-item p { font-size: 1.2rem; font-weight: 600; color: #1a237e; }
+        .summary-item.warning p { color: #ff9800; }
+        .summary-item.alert p { color: #f44336; }
+        .summary-item.success p { color: #4caf50; }
+
+        .top-skus-section { background: white; border-radius: 12px; padding: 25px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); margin-bottom: 30px; }
+        .top-skus-section h2 { font-size: 1.3rem; color: #1a237e; margin-bottom: 20px; padding-bottom: 12px; border-bottom: 2px solid #f0f2f5; }
+        .skus-container { display: grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap: 20px; }
+        .sku-card { background: #f8f9fa; border-radius: 8px; padding: 20px; border-left: 4px solid #1a237e; transition: transform 0.3s ease; }
+        .sku-card:hover { transform: translateY(-3px); box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
+        .sku-rank { display: inline-block; background: #1a237e; color: white; width: 30px; height: 30px; border-radius: 50%; text-align: center; line-height: 30px; font-weight: bold; margin-bottom: 10px; }
+        .sku-name { font-weight: 600; color: #333; margin-bottom: 8px; font-size: 1rem; }
+        .sku-details { display: flex; justify-content: space-between; margin-top: 15px; padding-top: 10px; border-top: 1px solid #e0e0e0; }
+        .sku-detail-item { text-align: center; }
+        .sku-detail-value { font-weight: 700; color: #1a237e; font-size: 1.1rem; }
+        .sku-detail-label { font-size: 0.8rem; color: #777; margin-top: 3px; }
+        .sku-brand { display: inline-block; padding: 3px 8px; background: #e8eaf6; color: #1a237e; border-radius: 4px; font-size: 0.8rem; font-weight: 600; margin-bottom: 10px; }
+
+        .footer { text-align: center; padding: 20px; color: #777; font-size: 0.9rem; border-top: 1px solid #eee; margin-top: 30px; }
+
+        @media (max-width: 768px) {
+            .charts-container { grid-template-columns: 1fr; }
+            .kpi-container { grid-template-columns: 1fr; }
+            .combined-chart-container { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="header">
+        <h1>DASHBOARD</h1>
+        <p>Sales Order Analysis Dashboard - FY 2025-26</p>
+    </div>
+
+    <div class="financial-overview">
+        <div class="financial-card">
+            <div class="financial-icon invoice-icon">📄</div>
+            <div class="financial-info">
+                <h3>Total Invoice Number</h3>
+                <div class="financial-value" id="total-invoice">0</div>
+                <div class="financial-subtext">Invoices issued to date</div>
+            </div>
+        </div>
+        <div class="financial-card">
+            <div class="financial-icon outstanding-icon">💰</div>
+            <div class="financial-info">
+                <h3>Outstanding Amount</h3>
+                <div class="financial-value outstanding-value" id="outstanding-amount">0.00 L</div>
+                <div class="financial-subtext">Pending payment in lakhs</div>
+            </div>
+        </div>
+        <div class="financial-card">
+            <div class="financial-icon pending-icon">📦</div>
+            <div class="financial-info">
+                <h3>Pending for Dispatch</h3>
+                <div class="financial-value pending-value" id="pending-dispatch">0.00 L</div>
+                <div class="financial-subtext">Incomplete order value in lakhs</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="kpi-container">
+        <div class="kpi-card success">
+            <h3>YTD Sale in lakh</h3>
+            <div class="kpi-value" id="ytd-sale">0.00</div>
+            <div class="kpi-subtext">Total sales for current financial year</div>
+            <div class="kpi-trend trend-up" id="ytd-trend">0.0%</div>
+        </div>
+        <div class="kpi-card">
+            <h3>Avg Monthly Sale in lakh</h3>
+            <div class="kpi-value" id="avg-monthly-sale">0.00</div>
+            <div class="kpi-subtext">Average monthly sales</div>
+            <div class="kpi-trend trend-up" id="avg-trend">0.0%</div>
+        </div>
+        <div class="kpi-card">
+            <h3>Total Purchase Orders</h3>
+            <div class="kpi-value" id="total-po">0</div>
+            <div class="kpi-subtext">Unique PO numbers</div>
+            <div class="kpi-trend trend-neutral">-</div>
+        </div>
+        <div class="kpi-card success">
+            <h3>Current Month Sale in lakh</h3>
+            <div class="kpi-value" id="current-month-sale">0.00</div>
+            <div class="kpi-subtext">Sales for current month</div>
+            <div class="kpi-trend trend-down" id="month-trend">0.0%</div>
+        </div>
+        <div class="kpi-card">
+            <h3>Total SKUs</h3>
+            <div class="kpi-value" id="total-sku">0</div>
+            <div class="kpi-subtext">Unique job names</div>
+            <div class="kpi-trend trend-up" id="sku-trend">0.0%</div>
+        </div>
+        <div class="kpi-card warning">
+            <h3>Completion Rate</h3>
+            <div class="kpi-value" id="completion-rate">0.0</div>
+            <div class="kpi-subtext">Orders completed vs total</div>
+            <div class="kpi-trend trend-up" id="completion-trend">0.0%</div>
+        </div>
+    </div>
+
+    <div class="combined-chart-container">
+        <div class="chart-card">
+            <h2>Monthly Sales Trend in lakh</h2>
+            <div class="chart-container">
+                <canvas id="monthlySalesChart"></canvas>
+            </div>
+            <div class="chart-legend">
+                <div class="legend-item">
+                    <div class="legend-color" style="background-color:#1a237e;"></div>
+                    <span>Sales Value</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background-color:#4caf50;"></div>
+                    <span>Growth Trend</span>
+                </div>
+            </div>
+        </div>
+        <div class="chart-card">
+            <h2>Monthly Purchase Order Trend</h2>
+            <div class="chart-container">
+                <canvas id="monthlyPOChart"></canvas>
+            </div>
+            <div class="chart-legend">
+                <div class="legend-item">
+                    <div class="legend-color" style="background-color:#283593;"></div>
+                    <span>No. of POs</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background-color:#5c6bc0;"></div>
+                    <span>PO Value in lakh</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="charts-container">
+        <div class="chart-card">
+            <h2>Product Sales Distribution in lakh</h2>
+            <div class="chart-container">
+                <canvas id="productSalesChart"></canvas>
+            </div>
+        </div>
+        <div class="chart-card">
+            <h2>Order Completion Status in lakh</h2>
+            <div class="chart-container">
+                <canvas id="orderCompletionChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <div class="top-skus-section">
+        <h2>Top SKUs by Dispatch Quantity (Highest to Lowest)</h2>
+        <div class="skus-container" id="skus-container"></div>
+    </div>
+
+    <div class="summary-section">
+        <h2>Key Insights Summary</h2>
+        <div class="summary-grid">
+            <!-- JS will inject summary items -->
+        </div>
+    </div>
+
+    <div class="footer">
+        JAINYTIC MIS || Sales Analytics Dashboard | Data Source: ORDER BOOK, SALES BOOK
+    </div>
+</div>
+
+<script src="data-source.js"></script>
+<script src="dashboard-logic.js"></script>
+<script src="dashboard-ui.js"></script>
+</body>
+</html>
