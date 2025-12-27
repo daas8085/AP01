@@ -5,7 +5,7 @@ function sumBy(arr, selector) {
 
 function groupByMonthFromDateString(dateStr) {
     // expects "YYYY-MM-DD" and returns "YYYY-MM"
-    return dateStr ? dateStr.slice(0, 7) : "";
+    return dateStr ? dateStr.slice(0, 7) : "";  
 }
 
 // 1. Financial KPIs
@@ -38,18 +38,35 @@ function calculatePendingDispatch(orderBook) {
 
 // 3. KPIs
 function calculateKPIs(orderBook, salesBook) {
-    const ytdSales = sumBy(salesBook, x => x.value) / 100000;
 
-    // assume data only for Oct–Dec; divide by distinct months present
-    const monthsSet = new Set(salesBook.map(x => groupByMonthFromDateString(x.date)).filter(Boolean));
+    // Format dates to yyyy-mm-dd (if still ISO string with time)
+    const normalizeDate = (d) => {
+        if (!d) return "";
+        return new Date(d).toISOString().slice(0, 10); // yyyy-mm-dd
+    };
+
+    const normalizedSales = salesBook.map(x => ({
+        ...x,
+        date: normalizeDate(x.date)
+    }));
+
+    const ytdSales = sumBy(normalizedSales, x => x.value) / 100000;
+
+    // Distinct months present for average monthly calculation
+    const monthsSet = new Set(
+        normalizedSales.map(x => groupByMonthFromDateString(x._dateObje)).filter(Boolean)
+    );
     const monthCount = monthsSet.size || 1;
     const avgMonthlySale = ytdSales / monthCount;
 
     const uniquePOs = new Set(orderBook.map(x => x.poNumber)).size;
 
-    const currentMonthPrefix = "2025-12";
+    // DYNAMIC current month prefix yyyy-mm
+    const now = new Date();
+    const currentMonthPrefix = now.toISOString().slice(0,7); // yyyy-mm
+
     const currentMonthSales = sumBy(
-        salesBook.filter(x => (x.date || "").startsWith(currentMonthPrefix)),
+        normalizedSales.filter(x => (x.date || "").startsWith(currentMonthPrefix)),
         x => x.value
     ) / 100000;
 
@@ -71,48 +88,63 @@ function calculateKPIs(orderBook, salesBook) {
     };
 }
 
-// 4. Monthly sales trend
-function prepareMonthlySalesSeries(salesBook) {
-    const months = ["2025-10", "2025-11", "2025-12"];
-    const labels = ["October 2025", "November 2025", "December 2025"];
 
-    const monthValues = months.map(m =>
-        sumBy(
-            salesBook.filter(s => (s.date || "").startsWith(m)),
-            x => x.value
-        ) / 100000
+function prepareMonthlySalesSeries(salesBook) {
+    const months = ["2025-10","2025-11","2025-12","2026-01","2026-02","2026-03","2026-04"];
+    const labels = ["October 2025","November 2025","December 2025","January 2026","February 2026","March 2026","April 2026"];
+
+    // monthly sales (lakh)
+    const sales = months.map(m =>
+        sumBy(salesBook.filter(s => (s.date || "").startsWith(m)), x => x.value) / 100000
     );
 
-    const growthPercentage = [0];
-    for (let i = 1; i < monthValues.length; i++) {
-        const prev = monthValues[i - 1];
-        const curr = monthValues[i];
-        const g = prev ? ((curr - prev) / prev) * 100 : 0;
-        growthPercentage.push(g);
-    }
+    // growth %
+    const growth = sales.map((s, i) =>
+        i === 0 ? 0 : ((s - sales[i - 1]) / sales[i - 1]) * 100
+    );
 
-    return { labels, monthValues, growthPercentage };
+    // cumulative YTD
+    let cumulative = [];
+    sales.reduce((acc, val, i) => cumulative[i] = acc + val, 0);
+
+    // bar color for up/down
+    const barColors = growth.map(g =>
+        g > 0 ? "#4caf50" : g < 0 ? "#f44336" : "#1a237e"
+    );
+
+    return { labels, months, sales, growth, cumulative, barColors };
 }
 
-// 5. Monthly PO trend
-function prepareMonthlyPOData(orderBook) {
-    const months = ["2025-10", "2025-11", "2025-12"];
-    const labels = ["October 2025", "November 2025", "December 2025"];
+// Monthly PO count + PO value (₹ → lakh)
+function prepareMonthlyPOSeries(orderBook) {
+    const months = ["2025-10","2025-11","2025-12","2026-01","2026-02","2026-03","2026-04"];
+    const labels = ["October 2025","November 2025","December 2025","January 2026",
+                    "February 2026","March 2026","April 2026"];
 
-    const poDataByMonth = months.map(m => {
-        const filtered = orderBook.filter(o => (o.loginDate || "").startsWith(m));
-        const count = new Set(filtered.map(o => o.poNumber)).size;
-        const value = sumBy(filtered, x => x.value) / 100000;
-        return { count, value };
-    });
+    // Count POs per month
+    const poCount = months.map(m =>
+        orderBook.filter(o => (o.date || "").startsWith(m)).length
+    );
 
-    return { labels, poDataByMonth };
+    // PO value per month (₹ → lakh)
+    const poValue = months.map(m =>
+        orderBook
+            .filter(o => (o.date || "").startsWith(m))
+            .reduce((s, x) => s + (x.value || 0), 0) / 100000
+    );
+
+    // growth % based on value
+    const growth = poValue.map((v, i) =>
+        i === 0 ? 0 : ((v - poValue[i - 1]) / poValue[i - 1]) * 100
+    );
+
+    return { labels, months, poCount, poValue, growth };
 }
 
 // 6. Product sales distribution (from productData or recalculated)
 function prepareProductSalesData(orderBook, productData) {
     if (productData && productData.length) {
-        const broRedObj  = productData.find(p => p.brand === "Bro Red");
+        const amazingObj = productData.find(p => p.brand === "Bro Red");
         const broCodeObj = productData.find(p => p.brand === "Bro Code");
         const bongaObj   = productData.find(p => p.brand === "Bonga");
         const plainObj   = productData.find(p => p.brand === "Plain");
@@ -120,7 +152,7 @@ function prepareProductSalesData(orderBook, productData) {
         return {
             labels: ["Bro Red", "Bro Code", "Bonga", "Plain"],
             values: [
-                (broRedObj?.value || 0) / 100000,
+                (amazingObj?.value || 0) / 100000,
                 (broCodeObj?.value || 0) / 100000,
                 (bongaObj?.value || 0) / 100000,
                 (plainObj?.value || 0) / 100000

@@ -1,0 +1,75 @@
+CLIENT-SIDE VISIBILITY DASHBOARD
+│
+├── 1. OBJECTIVE (Why we built this)
+│     ├── Customer transparency & trust
+│     ├── Reduce follow-up calls & confusion
+│     ├── Faster decision making for both sides
+│     ├── Real-time visibility of sales & orders
+│     └── Performance communication without manual reports
+│
+├── 2. MY RESEARCH (What I searched and learned)
+│     ├── Business KPIs used in packaging & manufacturing industries
+│     │     ├── YTD Sale
+│     │     ├── Completion Rate
+│     │     ├── Outstanding Amount
+│     │     └── Pending Dispatch
+│     │
+│     ├── Chart visualization & UI behavior
+│     │     ├── Monthly Sales trend patterns
+│     │     ├── Purchase Order volume vs value
+│     │     └── SKU contribution chart
+│     │
+│     ├── User-experience patterns
+│     │     ├── Drill-down (click → details)
+│     │     ├── Slide-up interaction for mobile
+│     │     ├── KPI cards for top-line view
+│     │     └── Searchable tables for clarity
+│     │
+│     └── Customer needs assessment
+│           ├── Clear status of each PO
+│           ├── Visibility into dispatch status
+│           ├── Invoice list & downloadable records
+│           └── Proof of transaction for financial reconciliation
+│
+├── 3. WHAT I HAVE IMPLEMENTED (Actual development work)
+│     ├── Data processing
+│     │     ├── Order Book → structured job data
+│     │     ├── Sales Book → invoice & payment data
+│     │     └── KPI calculations automated
+│     │
+│     ├── Dashboard interface
+│     │     ├── 9 business KPIs displayed live
+│     │     ├── Monthly sales & PO charts
+│     │     └── Top SKU performance cards
+│     │
+│     ├── Client-side transparency features
+│     │     ├── Click any number → full detail list
+│     │     ├── Slide-up drawer for drill-down view
+│     │     ├── Incomplete vs complete order clarity
+│     │     └── Month-wise invoice breakdown
+│     │
+│     └── Download options (under development)
+│           ├── Export invoice list (CSV/Excel)
+│           ├── PDF invoice download (if provided)
+│           └── Shareable URLs for customer access
+│
+├── 4. VALUE PROPOSITION FOR CUSTOMER (What they gain)
+│     ├── Live order visibility
+│     ├── No dependency on phone calls/WhatsApp updates
+│     ├── Confidence in process transparency
+│     ├── Traceability of every job & invoice
+│     └── Proof-based communication with internal accounts team
+│
+├── 5. VALUE PROPOSITION FOR COMPANY (What we gain)
+│     ├── Builds trust → faster approvals & payments
+│     ├── Reduced operational follow-ups
+│     ├── Improved customer experience without manual effort
+│     ├── Stronger position in negotiation due to transparency
+│     └── Dashboard reuse capability for multiple customers
+│
+└── 6. NEXT PHASE ROADMAP (Cost-effective steps ahead)
+      ├── Customer login access
+      ├── Brand & month filters
+      ├── Payment aging screen
+      ├── Shipment tracking integration
+      └── Automated mail sending of pending dispatch list
