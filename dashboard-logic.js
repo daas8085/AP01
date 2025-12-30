@@ -1,79 +1,92 @@
-// Utility
+// ===== UTIL =====
 function sumBy(arr, selector) {
     return arr.reduce((s, x) => s + (selector(x) || 0), 0);
 }
-
-function groupByMonthFromDateString(dateStr) {
-    // expects "YYYY-MM-DD" and returns "YYYY-MM"
-    return dateStr ? dateStr.slice(0, 7) : "";  
+function monthKey(dateStr) {
+    return dateStr ? dateStr.slice(0, 7) : "";
 }
 
-// 1. Financial KPIs
+
+
+// ===== 1. FINANCIAL OVERVIEW =====
 function calculateFinancialOverview(salesBook, todayStr = "2025-12-20") {
     const uniqueInvoices = new Set(salesBook.map(x => x.invoiceNo)).size;
 
     const today = new Date(todayStr);
     let outstandingAmount = 0;
+
     salesBook.forEach(inv => {
         const due = new Date(inv.dueDate);
-        if (due <= today) {
-            outstandingAmount += (inv.value || 0);
-        }
+        if (due <= today) outstandingAmount += (inv.value || 0);
     });
-    const outstandingAmountInLakh = outstandingAmount / 100000;
 
     return {
         totalInvoiceNumber: uniqueInvoices,
-        outstandingAmountInLakh: outstandingAmountInLakh
+        outstandingAmountInLakh: outstandingAmount / 100000
     };
 }
 
-// 2. Pending for dispatch (incomplete order value)
+
+// ===== 2. PENDING DISPATCH (Option B — Remaining Value) ===== due to recent edits
+
+    function calculatePendingDispatch(orderBook) {
+        let totalRemaining = 0;
+
+        orderBook.forEach(o => {
+             if ((o.status || "").toLowerCase() === "incomplete" && o.value) {
+            totalRemaining += o.value;
+        }
+    });
+
+        return totalRemaining / 100000;
+    
+}
+
+/*
 function calculatePendingDispatch(orderBook) {
-    const pendingValue = orderBook
-        .filter(o => (o.status || "").toLowerCase() === "incomplete")
-        .reduce((s, o) => s + (o.value || 0), 0);
-    return pendingValue / 100000;
+    let totalIncompleteValue = 0;
+
+    orderBook.forEach(o => {
+        if ((o.status || "").toLowerCase() === "incomplete" && o.value) {
+            totalIncompleteValue += o.value;
+        }
+    });
+
+    return totalIncompleteValue / 100000;  // convert to lakh
 }
 
-// 3. KPIs
+
+
+
+*/
+// ===== 3. KPI CALCULATIONS =====
 function calculateKPIs(orderBook, salesBook) {
-
-    // Format dates to yyyy-mm-dd (if still ISO string with time)
-    const normalizeDate = (d) => {
-        if (!d) return "";
-        return new Date(d).toISOString().slice(0, 10); // yyyy-mm-dd
-    };
-
     const normalizedSales = salesBook.map(x => ({
         ...x,
-        date: normalizeDate(x.date)
+        date: x.date ? x.date.slice(0,10) : ""
     }));
 
     const ytdSales = sumBy(normalizedSales, x => x.value) / 100000;
 
-    // Distinct months present for average monthly calculation
-    const monthsSet = new Set(
-        normalizedSales.map(x => groupByMonthFromDateString(x._dateObje)).filter(Boolean)
+    const uniqueMonths = new Set(
+        normalizedSales.map(x => monthKey(x.date)).filter(Boolean)
     );
-    const monthCount = monthsSet.size || 1;
-    const avgMonthlySale = ytdSales / monthCount;
+    const avgMonthlySale = ytdSales / (uniqueMonths.size || 1);
 
     const uniquePOs = new Set(orderBook.map(x => x.poNumber)).size;
 
-    // DYNAMIC current month prefix yyyy-mm
     const now = new Date();
-    const currentMonthPrefix = now.toISOString().slice(0,7); // yyyy-mm
+    const currentMonth = now.toISOString().slice(0,7);
 
     const currentMonthSales = sumBy(
-        normalizedSales.filter(x => (x.date || "").startsWith(currentMonthPrefix)),
+        normalizedSales.filter(x => monthKey(x.date) === currentMonth),
         x => x.value
     ) / 100000;
 
     const totalSKU = new Set(orderBook.map(x => x.jobName)).size;
 
     const totalPOValue = sumBy(orderBook, x => x.value);
-    const completeValue = sumBy(orderBook.filter(o => (o.status || "").toLowerCase() === "complete"), x => x.value);
+    const completeValue = sumBy(orderBook.filter(o => (o.status||"").toLowerCase()==="complete"), x=>x.value);
     const completionRate = totalPOValue ? (completeValue / totalPOValue) * 100 : 0;
 
     return {
@@ -89,197 +102,128 @@ function calculateKPIs(orderBook, salesBook) {
 }
 
 
+// ===== 4. MONTHLY SALES SERIES =====
 function prepareMonthlySalesSeries(salesBook) {
-    const months = ["2025-10","2025-11","2025-12","2026-01","2026-02","2026-03","2026-04"];
-    const labels = ["October 2025","November 2025","December 2025","January 2026","February 2026","March 2026","April 2026"];
+    const months = ["2025-07","2025-08","2025-09","2025-10","2025-11","2025-12","2026-01"];
+    const labels = ["July 2025","August 2025","September 2025","October 2025","November 2025","December 2025","January 2026"];
 
-    // monthly sales (lakh)
     const sales = months.map(m =>
-        sumBy(salesBook.filter(s => (s.date || "").startsWith(m)), x => x.value) / 100000
+        sumBy(salesBook.filter(s => monthKey(s.date) === m), x => x.value) / 100000
     );
 
-    // growth %
-    const growth = sales.map((s, i) =>
-        i === 0 ? 0 : ((s - sales[i - 1]) / sales[i - 1]) * 100
-    );
-
-    // cumulative YTD
-    let cumulative = [];
+    const growth = sales.map((v,i)=> i===0 ? 0 : ((v - sales[i-1])/(sales[i-1]||1))*100);
+    
+    const cumulative = [];
     sales.reduce((acc, val, i) => cumulative[i] = acc + val, 0);
 
-    // bar color for up/down
-    const barColors = growth.map(g =>
-        g > 0 ? "#4caf50" : g < 0 ? "#f44336" : "#1a237e"
-    );
+    const barColors = growth.map(g => g>0 ? "#4caf50" : g<0 ? "#f44336" : "#1a237e");
 
     return { labels, months, sales, growth, cumulative, barColors };
 }
 
-// Monthly PO count + PO value (₹ → lakh)
+
+// ===== 5. MONTHLY PO SERIES =====
 function prepareMonthlyPOSeries(orderBook) {
-    const months = ["2025-10","2025-11","2025-12","2026-01","2026-02","2026-03","2026-04"];
-    const labels = ["October 2025","November 2025","December 2025","January 2026",
-                    "February 2026","March 2026","April 2026"];
+    const months = ["2025-07","2025-08","2025-09","2025-10","2025-11","2025-12","2026-01"];
+    const labels = ["October 2025","November 2025","December 2025","January 2026","February 2026","March 2026","April 2026"];
 
-    // Count POs per month
-    const poCount = months.map(m =>
-        orderBook.filter(o => (o.date || "").startsWith(m)).length
-    );
+    const poCount = months.map(m => orderBook.filter(o => monthKey(o.date) === m).length);
 
-    // PO value per month (₹ → lakh)
     const poValue = months.map(m =>
-        orderBook
-            .filter(o => (o.date || "").startsWith(m))
-            .reduce((s, x) => s + (x.value || 0), 0) / 100000
+        sumBy(orderBook.filter(o => monthKey(o.date) === m), x => x.value) / 100000
     );
 
-    // growth % based on value
-    const growth = poValue.map((v, i) =>
-        i === 0 ? 0 : ((v - poValue[i - 1]) / poValue[i - 1]) * 100
-    );
+    const growth = poValue.map((v,i)=> i===0 ? 0 : ((v-poValue[i-1])/(poValue[i-1]||1))*100);
 
     return { labels, months, poCount, poValue, growth };
 }
 
-// 6. Product sales distribution (from productData or recalculated)
-function prepareProductSalesData(orderBook, productData) {
-    if (productData && productData.length) {
-        const amazingObj = productData.find(p => p.brand === "Bro Red");
-        const broCodeObj = productData.find(p => p.brand === "Bro Code");
-        const bongaObj   = productData.find(p => p.brand === "Bonga");
-        const plainObj   = productData.find(p => p.brand === "Plain");
 
-        return {
-            labels: ["Bro Red", "Bro Code", "Bonga", "Plain"],
-            values: [
-                (amazingObj?.value || 0) / 100000,
-                (broCodeObj?.value || 0) / 100000,
-                (bongaObj?.value || 0) / 100000,
-                (plainObj?.value || 0) / 100000
-            ]
-        };
-    }
+// ===== 6. PRODUCT DISTRIBUTION =====
+// ===== COMPLETE vs INCOMPLETE — VALUE + COUNT =====
+function prepareCompletionPieData(orderBook) {
+    let completeValue = 0;
+    let incompleteValue = 0;
 
-    // fallback: compute from orderBook
-    const brandMap = {};
+    let completeCount = 0;
+    let incompleteCount = 0;
+
     orderBook.forEach(o => {
-        const b = o.brand || "Other";
-        if (!brandMap[b]) brandMap[b] = 0;
-        brandMap[b] += (o.value || 0);
+        const status = (o.status || "").toLowerCase();
+        const val = o.value || 0;
+
+        if (status === "complete") {
+            completeValue += val;
+            completeCount++;
+        }
+
+        if (status === "incomplete") {
+            incompleteValue += val;
+            incompleteCount++;
+        }
     });
-    const labels = Object.keys(brandMap);
-    const values = labels.map(b => brandMap[b] / 100000);
-    return { labels, values };
+
+    return {
+        labels: ["Complete", "Incomplete"],
+        values: [
+            completeValue / 100000,     // convert to lakh
+            incompleteValue / 100000
+        ],
+        counts: [
+            completeCount,
+            incompleteCount
+        ]
+    };
 }
 
-// 7. Order completion chart values
+
+
+// ===== 7. COMPLETION =====
 function prepareCompletionChartData(kpi, pendingDispatchInLakh) {
     return {
-        labels: ["Total PO Value", "Complete Value", "Incomplete Value"],
+        labels: ["Total PO Value", "Complete Value", "Pending Value"],
         values: [kpi.totalPOValue, kpi.completeValue, pendingDispatchInLakh]
     };
 }
 
-// 8. Top SKUs by dispatch
+
+// ===== 8. TOP SKUs =====
 function prepareTopSKUs(orderBook, topN = 8) {
     const jobDispatchMap = {};
 
     orderBook.forEach(o => {
         if (!o.jobName) return;
+        const qtyOrder = Number(o.orderQty) || 0;
+        const qtyDisp  = Number(o.dispQty)  || 0;
+
         if (!jobDispatchMap[o.jobName]) {
             jobDispatchMap[o.jobName] = {
                 jobName: o.jobName,
                 brand: o.brand,
-                totalDispatch: 0,
                 totalOrder: 0,
-                poSet: new Set(),
-                status: o.status
+                totalDispatch: 0,
+                poSet: new Set()
             };
         }
+
         const item = jobDispatchMap[o.jobName];
-        item.totalDispatch += (o.dispQty || 0);
-        item.totalOrder += (o.orderQty || 0);
+        item.totalOrder += qtyOrder;
+        item.totalDispatch += qtyDisp;
         item.poSet.add(o.poNumber);
     });
 
-    const arr = Object.values(jobDispatchMap).map(x => ({
+    const arr = Object.values(jobDispatchMap).map(x=>({
         jobName: x.jobName,
         brand: x.brand,
-        totalDispatch: x.totalDispatch,
         totalOrder: x.totalOrder,
-        poCount: x.poSet.size,
-        status: x.status
+        totalDispatch: x.totalDispatch,
+        poCount: x.poSet.size
     }));
 
-    arr.sort((a, b) => b.totalDispatch - a.totalDispatch);
+    arr.sort((a,b)=>b.totalDispatch-a.totalDispatch);
 
     const top = arr.slice(0, topN);
-    const totalDispatchQty = arr.reduce((s, x) => s + x.totalDispatch, 0);
+    const totalDispatchQty = arr.reduce((s, x)=>s + x.totalDispatch,0);
 
     return { top, totalDispatchQty };
-}
-
-// 9. Summary text objects
-function buildSummaryObjects(kpi, productSales, poDataMonth, topSKUInfo, outstandingInLakh, pendingDispatchInLakh) {
-    const mostActiveMonth = (() => {
-        let maxIdx = 0;
-        let maxCount = 0;
-        poDataMonth.poDataByMonth.forEach((m, i) => {
-            if (m.count > maxCount) {
-                maxCount = m.count;
-                maxIdx = i;
-            }
-        });
-        return { monthLabel: poDataMonth.labels[maxIdx], poCount: maxCount };
-    })();
-
-    const topSKUName = topSKUInfo.top.length ? topSKUInfo.top[0].jobName : "N/A";
-
-    const totalPOValuePerPO = kpi.uniquePOs ? (kpi.totalPOValue / kpi.uniquePOs) : 0;
-
-    const broCodeIndex = productSales.labels.indexOf("Bro Code");
-    const broCodeValue = broCodeIndex >= 0 ? productSales.values[broCodeIndex] : 0;
-
-    return [
-        {
-            type: "normal",
-            title: "Top Selling Product",
-            text: `Bro Code ${broCodeValue.toFixed(2)} lakh`
-        },
-        {
-            type: "normal",
-            title: "Most Active Month",
-            text: `${mostActiveMonth.monthLabel} ${mostActiveMonth.poCount} POs`
-        },
-        {
-            type: "warning",
-            title: "Completion Rate",
-            text: `${kpi.completionRate.toFixed(1)}%`
-        },
-        {
-            type: "normal",
-            title: "Avg PO Value",
-            text: `${totalPOValuePerPO.toFixed(2)} lakh`
-        },
-        {
-            type: "normal",
-            title: "Top SKU by Dispatch",
-            text: topSKUName.length > 40 ? `${topSKUName.substring(0, 40)}...` : topSKUName
-        },
-        {
-            type: "normal",
-            title: "Total Dispatch Qty",
-            text: `${topSKUInfo.totalDispatchQty.toLocaleString()} units`
-        },
-        {
-            type: "alert",
-            title: "Outstanding Amount",
-            text: `${outstandingInLakh.toFixed(2)} Lakh`
-        },
-        {
-            type: "warning",
-            title: "Pending Dispatch",
-            text: `${pendingDispatchInLakh.toFixed(2)} Lakh`
-        }
-    ];
 }

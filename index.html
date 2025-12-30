@@ -5,6 +5,7 @@
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>Jainytic Analytics Dashboard</title>
         <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+        <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
         <style>
             * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
             body { background-color: #f5f7fa; color: #333; padding: 20px; }
@@ -73,6 +74,7 @@
     margin-bottom: 20px;
 }
 
+
 /* Title */
 .top-skus-section h2 {
     font-size: 1.3rem;
@@ -81,7 +83,14 @@
     padding-bottom: 12px;
     border-bottom: 2px solid #f0f2f5;
 }
-
+/* logo placed on right side without shifting title */
+.header-logo {
+    position: absolute;
+    right: 25px;       /* adjust spacing from right edge */
+    top: 50%;
+    transform: translateY(-50%);
+    height: 45px;      /* adjust logo size */
+}
 /* CONVERTED TO LIST DISPLAY + SCROLL */
 .skus-container {
     display: flex;
@@ -297,7 +306,7 @@
                 <div class="financial-icon pending-icon">📦</div>
                 <div class="financial-info">
                     <h3>Pending for Dispatch</h3>
-                    <div class="financial-value pending-value" id="pending-dispatch">0.00 L</div>
+                    <div class="financial-value pending-value" id="pending-dispatch">0.0</div>
                     <div class="financial-subtext">Incomplete order value in lakhs</div>
                 </div>
             </div>
@@ -370,7 +379,7 @@
                     </div>
                     <div class="legend-item">
                         <div class="legend-color" style="background-color:#5c6bc0;"></div>
-                        <span>PO Value in lakh</span>
+                        <span>PO Value in lakh</span> 
                     </div>
                 </div>
             </div>
@@ -391,6 +400,7 @@
             </div>
         </div>
 
+
        <div class="top-skus-section">
              <h2>Top SKUs by Dispatch Quantity (Highest to Lowest)</h2>
 
@@ -402,8 +412,36 @@
 
         <div class="summary-section">
             <h2>Key Insights Summary</h2>
-            <div class="summary-grid">
-                <!-- JS will inject summary items -->
+    <div class="summary-grid">
+
+        <div class="summary-item">
+            <h3>Operational Excellence</h3>
+            <p>Nearly 100% order-to-dispatch match shows best-in-class fulfillment reliability.</p>
+        </div>
+
+        <div class="summary-item">
+            <h3>Revenue Stability</h3>
+            <p>Standardized pricing and repeat orders indicate predictable revenue and controllable margins.</p>
+        </div>
+
+        <div class="summary-item">
+            <h3>Scalable Business Model</h3>
+            <p>High repeat jobs imply strong core products rather than fragile custom demand.</p>
+        </div>
+
+        <div class="summary-item">
+            <h3>Financial Efficiency</h3>
+            <p>Consolidated invoicing reduces processing overhead and improves cash-flow control.</p>
+        </div>
+
+        <div class="summary-item">
+            <h3>Data Governance Gap (Main Risk)</h3>
+            <p>Missing brand information limits strategic analysis — fixing this unlocks brand profitability insights.</p>
+        </div>
+
+    </div>
+</div>
+
             </div>
         </div>
 

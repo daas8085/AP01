@@ -13,30 +13,26 @@ def df_to_js_array(df):
     # Drop completely empty rows
     df = df.dropna(how="all")
 
-    # Convert any date-like column to format → YYYY-Mon-DD  (example 2025-Dec-26)
+    # Convert any date-like column to format → YYYY-MM-DD
     for col in df.columns:
-        if "date" in col.lower():  # catches: date, loginDate, dueDate, invoiceDate etc.
+        if "date" in col.lower():
             df[col] = (
                 pd.to_datetime(df[col], errors="coerce")
-                  .dt.strftime("%Y-%m-%d")   # <— UPDATED DATE FORMAT HERE
+                .dt.strftime("%Y-%m-%d")
             )
 
-    # Replace NaN -> empty strings
+    # Replace NaN → empty strings
     df = df.fillna("")
 
-    # Convert to Python list of dictionaries
-    records = df.to_dict(orient="records")
-
-    # JSON serialization, safe fallback with default=str
-    return json.dumps(records, ensure_ascii=False, indent=4, default=str)
+    # Convert to list of dicts
+    return json.dumps(df.to_dict(orient="records"), ensure_ascii=False, indent=4, default=str)
 
 
 def main():
-    # Read Excel sheets
     order_df = pd.read_excel(EXCEL_PATH, sheet_name=ORDER_SHEET)
     sales_df = pd.read_excel(EXCEL_PATH, sheet_name=SALES_SHEET)
 
-    # Rename columns to match dashboard usage
+    # Rename keys to frontend usage
     order_df = order_df.rename(columns={
         "PO Number": "poNumber",
         "Job Name": "jobName",
@@ -44,31 +40,30 @@ def main():
         "Order Qty": "orderQty",
         "Dispatch Qty": "dispQty",
         "Status": "status",
-        "Login Date": "loginDate",
+        "Login Date": "date",
         "Invoice No": "invoiceNo",
-        "Value": "value"
+        "Value": "value",
+        "Link" : "link"
     })
 
     sales_df = sales_df.rename(columns={
         "Date": "date",
         "Invoice No": "invoiceNo",
         "Value": "value",
-        "Due Date": "dueDate"
+        "Due Date": "dueDate",
+        "link" : "link"
     })
 
-    # Convert to JSON with formatted dates
     order_json = df_to_js_array(order_df)
     sales_json = df_to_js_array(sales_df)
 
-    # Generate JS file content
     js_content = (
         "const orderBookData = " + order_json + ";\n\n"
         "const salesBookData = " + sales_json + ";\n"
     )
 
-    # Save output
     OUTPUT_JS.write_text(js_content, encoding="utf-8")
-    print(f"✔ Wrote formatted dates to: {OUTPUT_JS}")
+    print(f"Wrote formatted data to: {OUTPUT_JS}")
 
 
 if __name__ == "__main__":
